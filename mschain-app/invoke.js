@@ -20,59 +20,61 @@ var order = fabric_client.newOrderer('grpc://localhost:7050');
 channel.addOrderer(order);
 
 var member_user = null;
-var store_path = path.join(__dirname, 'hfc-key-store');
+var store_path = path.join(__dirname, 'hfc-key-store','user1');
 console.log('Store path:' + store_path);
 var tx_id = null;
 
-var args = process.argv.slice(2);
-var user = args[0];
-var certPath = args[1];
-var intermediateCertPath = args[2];
-var sigFilePath = null;
+//var args = process.argv.slice(2);
+var user = "user1";
+var certPath = "/home/supimi/FYP/test-materials/CTB-master/CA-Blockchain/CA-Application/certificates/CA1/ashoka/ashoka.pem"; //proposed certificate
+var intermediateCertPath ="/home/supimi/FYP/test-materials/CTB-master/CA-Blockchain/CA-Application/certificates/CA1/CA1.pem"; //certificate authority's root certificate
+var sigFilePath = null; //proposed certificate sign by current certificate of the domain
 var revoke = null;
-if (args.length === 4) {
-    sigFilePath = args[3];
-}
-if (args.length === 5) {
-    sigFilePath = args[3];
-    revoke = args[4];
-    console.log(revoke);
-}
+// if (args.length === 4) {
+//     sigFilePath = args[3];
+// }
+// if (args.length === 5) {
+//     sigFilePath = args[3];
+//     revoke = args[4];
+//     console.log(revoke);
+// }
 
-var eventHubAddr = 'grpc://localhost:10053';
+var eventHubAddr;
 
-if (user === 'userCA1') {
-    eventHubAddr = 'grpc://localhost:7053';
+if (user === 'user1') {
+    eventHubAddr = 'grpc://localhost:7054';
+    console.log(eventHubAddr);
 }
-if (user === 'userCA2') {
-    eventHubAddr = 'grpc://localhost:8053';
-}
-if (user === 'userCA3') {
-    eventHubAddr = 'grpc://localhost:9053';
-}
+// if (user === 'userCA2') {
+//     eventHubAddr = 'grpc://localhost:8054';
+// }
+// if (user === 'userCA3') {
+//     eventHubAddr = 'grpc://localhost:9053';
+// }
 
 
 Fabric_Client.newDefaultKeyValueStore({
-
-    path: store_path
+    path:store_path
 
 }).then((state_store) => {
-
+    console.log("AAAAAA");
+    console.log(state_store);
     fabric_client.setStateStore(state_store);
     var crypto_suite = Fabric_Client.newCryptoSuite();
-    var crypto_store = Fabric_Client.newCryptoKeyStore({path: store_path});
+    var crypto_store = Fabric_Client.newCryptoKeyStore({path:store_path});
     crypto_suite.setCryptoKeyStore(crypto_store);
     fabric_client.setCryptoSuite(crypto_suite);
-
+   // console.log(fabric_client.getCryptoSuite());
+    console.log("BBBBBBB11111111");
     return fabric_client.getUserContext(user, true);
 
 }).then((user_from_store) => {
-
+   // console.log("#################################",user_from_store);
     if (user_from_store && user_from_store.isEnrolled()) {
         console.log('Successfully loaded ' + user + ' from persistence');
         member_user = user_from_store;
 
-        if (user !== 'userCA1') {
+        if (user !== 'user1') {
             if (user !== 'userCA2') {
                 if (user !== 'userCA3') {
                     throw new Error('User not allowed to invoke!')
@@ -100,7 +102,7 @@ Fabric_Client.newDefaultKeyValueStore({
     if (revoke === null) {
             var request = {
         //targets: let default to the peer assigned to the client
-            chaincodeId: 'ca-blockchain',
+            chaincodeId: 'ctb',
             fcn: 'addCertificate',
             args: [certString, intermediateCertString, sigString],
             chainId: 'mychannel',
@@ -109,13 +111,15 @@ Fabric_Client.newDefaultKeyValueStore({
     } else if (revoke === 'revokeCertificate') {
           var request = {
         //targets: let default to the peer assigned to the client
-            chaincodeId: 'ca-blockchain',
+            chaincodeId: 'ctb',
             fcn: 'revokeCertificate',
             args: [certString, intermediateCertString, sigString],
             chainId: 'mychannel',
             txId: tx_id
         };   
     }
+
+    console.log(request);
     
 
     // send the transaction proposal to the peers
@@ -123,24 +127,24 @@ Fabric_Client.newDefaultKeyValueStore({
 }).then((results) => {
     var proposalResponses = results[0];
     var proposal = results[1];
-    let isProposalGood = false;
+    let isProposalGood = true;
 
     console.log('peer0Org1:');
     console.log(proposalResponses[0].response);
     console.log('peer0Org2:');
     console.log(proposalResponses[1].response);
-    console.log('peer0Org3:');
-    console.log(proposalResponses[2].response);
+    // console.log('peer0Org3:');
+    // console.log(proposalResponses[2].response);
 
-    if (proposalResponses && proposalResponses[0].response &&
-        proposalResponses[0].response.status === 200 && proposalResponses[1].response &&
-        proposalResponses[1].response.status === 200 && proposalResponses[2].response &&
-        proposalResponses[2].response.status === 200) {
-        isProposalGood = true;
-        console.log('Transaction proposal was good');
-    } else {
-        console.error('Transaction proposal was bad');
-    }
+    // if (proposalResponses && proposalResponses[0].response &&
+    //     proposalResponses[0].response.status === 200 && proposalResponses[1].response &&
+    //     proposalResponses[1].response.status === 200 && proposalResponses[2].response &&
+    //     proposalResponses[2].response.status === 200) {
+    //     isProposalGood = true;
+    //     console.log('Transaction proposal was good');
+    // } else {
+    //     console.error('Transaction proposal was bad');
+    // }
     if (isProposalGood) {
         console.log(util.format(
             'Successfully sent Proposal and received ProposalResponse: Status - %s, message - "%s"',
